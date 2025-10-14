@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "307548946937",
+    "firebase_url": "https://pruebasid2025-2-default-rtdb.firebaseio.com",
+    "project_id": "pruebasid2025-2",
+    "storage_bucket": "pruebasid2025-2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:307548946937:android:733a7f8e33896d833e7d28",
+        "android_client_info": {
+          "package_name": "com.upb.SID20252"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC9iNPHNeyshfJ1UIy8HWqFgG9ZJyimmQA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
