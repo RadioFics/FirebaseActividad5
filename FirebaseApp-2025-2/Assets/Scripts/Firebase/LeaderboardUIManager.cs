@@ -1,35 +1,63 @@
-using Firebase.Database;
+using System;
 using System.Collections.Generic;
-using System.Linq;
-using TMPro;
+using Firebase.Auth;
+using Firebase.Database;
 using UnityEngine;
 
 public class LeaderboardUIManager : MonoBehaviour
 {
-    [Header("Firebase")]
-    [SerializeField] private int topCount = 3;
+    public Transform content;
+    public GameObject rowPrefab;
 
-    [Header("UI References")]
-    [SerializeField] private Transform entryContainer; // Contenedor del leaderboard
-    [SerializeField] private GameObject entryPrefab;   // Prefab con dos TMP_Text (username y score)
+    private DatabaseReference leaderboardRef;
+    private bool dbSubscribed = false;
+    private Queue<Action> mainQueue = new Queue<Action>();
 
-    private Query leaderboardQuery;
-    private List<GameObject> spawnedEntries = new List<GameObject>();
-
-    private void Start()
+    void Start()
     {
-        leaderboardQuery = FirebaseDatabase.DefaultInstance
-            .GetReference("users")
-            .OrderByChild("score")
-            .LimitToLast(topCount);
-
-        leaderboardQuery.ValueChanged += HandleLeaderboardValueChanged;
+        FirebaseAuth.DefaultInstance.StateChanged += OnAuthStateChanged;
+        if (FirebaseAuth.DefaultInstance.CurrentUser != null)
+            SubscribeLeaderboard();
     }
 
-    private void OnDestroy()
+    private void OnAuthStateChanged(object sender, EventArgs e)
     {
-        if (leaderboardQuery != null)
-            leaderboardQuery.ValueChanged -= HandleLeaderboardValueChanged;
+        var user = FirebaseAuth.DefaultInstance.CurrentUser;
+        if (user == null)
+        {
+            EnqueueOnMainThread(UnsubscribeLeaderboard);
+            return;
+        }
+        SubscribeLeaderboard();
+    }
+
+    private void SubscribeLeaderboard()
+    {
+        if (dbSubscribed) return;
+        try
+        {
+            leaderboardRef = FirebaseDatabase.DefaultInstance.GetReference("leaderboard");
+            leaderboardRef.ValueChanged += HandleLeaderboardValueChanged;
+            dbSubscribed = true;
+        }
+        catch (Exception ex)
+        {
+            Debug.LogWarning("[LeaderboardUIManager] Subscribe failed: " + ex);
+            dbSubscribed = false;
+        }
+    }
+
+    private void UnsubscribeLeaderboard()
+    {
+        try
+        {
+            if (leaderboardRef != null && dbSubscribed)
+                leaderboardRef.ValueChanged -= HandleLeaderboardValueChanged;
+        }
+        catch (Exception ex) { Debug.LogWarning("[LeaderboardUIManager] Unsubscribe error: " + ex); }
+        dbSubscribed = false;
+        leaderboardRef = null;
+        // opcional: limpiar UI aquí
     }
 
     private void HandleLeaderboardValueChanged(object sender, ValueChangedEventArgs args)
@@ -37,50 +65,36 @@ public class LeaderboardUIManager : MonoBehaviour
         if (args.DatabaseError != null)
         {
             Debug.LogError("Firebase DB error: " + args.DatabaseError.Message);
+            if (args.DatabaseError.Message?.ToLower().Contains("permission") == true)
+                EnqueueOnMainThread(UnsubscribeLeaderboard);
             return;
         }
 
-        if (!args.Snapshot.Exists)
+        var snap = args.Snapshot;
+        EnqueueOnMainThread(() =>
         {
-            ClearEntries();
-            return;
-        }
-
-        var list = new List<(string username, int score)>();
-
-        foreach (DataSnapshot child in args.Snapshot.Children)
-        {
-            string username = child.Child("username").Value?.ToString() ?? "Unknown";
-            int score = int.TryParse(child.Child("score").Value?.ToString(), out int s) ? s : 0;
-            list.Add((username, score));
-        }
-
-        var ordered = list.OrderByDescending(x => x.score).Take(topCount).ToList();
-        UpdateLeaderboardUI(ordered);
-    }
-
-    private void ClearEntries()
-    {
-        foreach (var go in spawnedEntries)
-            Destroy(go);
-        spawnedEntries.Clear();
-    }
-
-    private void UpdateLeaderboardUI(List<(string username, int score)> orderedList)
-    {
-        ClearEntries();
-
-        foreach (var item in orderedList)
-        {
-            GameObject entryGO = Instantiate(entryPrefab, entryContainer);
-            spawnedEntries.Add(entryGO);
-
-            TMP_Text[] texts = entryGO.GetComponentsInChildren<TMP_Text>();
-            if (texts.Length >= 2)
+            if (snap == null || !snap.Exists) return;
+            foreach (var child in snap.Children)
             {
-                texts[0].text = item.username;
-                texts[1].text = item.score.ToString();
+                Debug.Log($"[LeaderboardUIManager] {child.Key} : {child.Value}");
+                // Actualizar UI según estructura de su leaderboard
             }
-        }
+        });
+    }
+
+    void Update()
+    {
+        lock (mainQueue) { while (mainQueue.Count > 0) mainQueue.Dequeue()?.Invoke(); }
+    }
+
+    private void EnqueueOnMainThread(Action a)
+    {
+        lock (mainQueue) mainQueue.Enqueue(a);
+    }
+
+    private void OnDestroy()
+    {
+        FirebaseAuth.DefaultInstance.StateChanged -= OnAuthStateChanged;
+        UnsubscribeLeaderboard();
     }
 }

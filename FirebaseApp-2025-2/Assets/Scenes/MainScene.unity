@@ -2162,9 +2162,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 136469d98c1ea9b4ba0f1b8d3bafcbe7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LeaderboardUIManager
-  topCount: 5
-  entryContainer: {fileID: 1493655534}
-  entryPrefab: {fileID: 1626943131729832616, guid: 40d2eb26830abfa498dd005104d68715, type: 3}
+  content: {fileID: 0}
+  rowPrefab: {fileID: 0}
 --- !u!1 &619394800
 GameObject:
   m_ObjectHideFlags: 0
@@ -6372,7 +6371,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 44928d83258fb0f41993b090b3fb326f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LoadSceneWhenAuthenticated
-  _sceneToLoad: GameScene
+  _sceneToLoad: UserScene
   _LoadSceneWhenAuthenticated: 1
 --- !u!1 &2007698485
 GameObject:
